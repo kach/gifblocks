@@ -1,0 +1,105 @@
+diff --git a/src/Scratch.as b/src/Scratch.as
+index 7b3ccb8..b9814b7 100644
+--- a/src/Scratch.as
++++ b/src/Scratch.as
+@@ -209,7 +209,8 @@ public class Scratch extends Sprite {
+ 		stage.addEventListener(Event.ENTER_FRAME, step);
+ 		stage.addEventListener(Event.RESIZE, onResize);
+ 
+-		setEditMode(startInEditMode());
++		// setEditMode(startInEditMode());
++        setEditMode(true);
+ 
+ 		// install project before calling fixLayout()
+ 		if (editMode) runtime.installNewProject();
+diff --git a/src/Specs.as b/src/Specs.as
+index 9576619..1e918db 100644
+--- a/src/Specs.as
++++ b/src/Specs.as
+@@ -394,6 +394,8 @@ public class Specs {
+ 		["hide all sprites",					" ", 99, "hideAll"],
+ 		["user id",								"r", 99, "getUserId"],
+ 
++        ["snapshot", " ", 5, "snapshot"],
++
+ 	];
+ 
+ 	public static var extensionSpecs:Array = ["when %m.booleanSensor", "when %m.sensor %m.lessMore %n", "sensor %m.booleanSensor?", "%m.sensor sensor value", "turn %m.motor on for %n secs", "turn %m.motor on", "turn %m.motor off", "set %m.motor power to %n", "set %m.motor2 direction to %m.motorDirection", "when distance %m.lessMore %n", "when tilt %m.eNe %n", "distance", "tilt"];
+diff --git a/src/primitives/Primitives.as b/src/primitives/Primitives.as
+index 142abb6..41c97cf 100644
+--- a/src/primitives/Primitives.as
++++ b/src/primitives/Primitives.as
+@@ -30,6 +30,22 @@ package primitives {
+ 	import scratch.ScratchSprite;
+ 	import translation.Translator;
+ 
++    // I didn't have the patience to figure out which imports were needed, so I
++    // imported them all. Sorry.
++    import flash.display.*;        
++    import flash.events.*;         
++    import flash.geom.Matrix;      
++    import flash.geom.Point;       
++    import flash.geom.Rectangle;   
++    import flash.media.*;          
++    import flash.net.*;            
++    import flash.system.System;    
++    import flash.text.TextField;   
++    import flash.utils.*;          
++    import util.*;
++    import by.blooddy.crypto.image.PNG24Encoder;            
++    import by.blooddy.crypto.image.PNGFilter;               
++
+ public class Primitives {
+ 
+ 	private const MaxCloneCount:int = 300;
+@@ -78,12 +94,28 @@ public class Primitives {
+ 		primTable["INCR_COUNT"]			= function(b:*):* { counter++ };
+ 		primTable["CLR_COUNT"]			= function(b:*):* { counter = 0 };
+ 
++        // Whoo
++        primTable["snapshot"] = snapshot;
++
+ 		new LooksPrims(app, interp).addPrimsTo(primTable);
+ 		new MotionAndPenPrims(app, interp).addPrimsTo(primTable);
+ 		new SoundPrims(app, interp).addPrimsTo(primTable);
+ 		new VideoMotionPrims(app, interp).addPrimsTo(primTable);
+ 		addOtherPrims(primTable);
+ 	}
++    public function fromArray(array:ByteArray):String {
++        var s:String = "";
++        for (var i:uint=0;i<array.length;i++) {
++            s+=("0"+array[i].toString(16)).substr(-2,2);
++        }
++        return s;
++    }
++    function snapshot(b:Block):void {
++        app.stagePane.commitPenStrokes();
++        var d:BitmapData = app.stagePane.saveScreenData();
++        var pngData:ByteArray = PNG24Encoder.encode(d, PNGFilter.PAETH);
++        app.externalCall('ping', null, fromArray(pngData));
++    }
+ 
+ 	protected function addOtherPrims(primTable:Dictionary):void {
+ 		new SensingPrims(app, interp).addPrimsTo(primTable);
+diff --git a/src/scratch/ScratchRuntime.as b/src/scratch/ScratchRuntime.as
+index 8b4fd6f..e072bdf 100644
+--- a/src/scratch/ScratchRuntime.as
++++ b/src/scratch/ScratchRuntime.as
+@@ -92,7 +92,7 @@ public class ScratchRuntime {
+ 	//------------------------------
+ 
+ 	public function stepRuntime():void {
+-		if (projectToInstall != null && (app.isOffline || app.isExtensionDevMode)) {
++		if (projectToInstall != null /* && (app.isOffline || app.isExtensionDevMode) */) {
+ 			installProject(projectToInstall);
+ 			if (saveAfterInstall) app.setSaveNeeded(true);
+ 			projectToInstall = null;
+@@ -844,7 +844,7 @@ public class ScratchRuntime {
+ 
+ 	public function projectLoadFailed(ignore:* = null):void {
+ 		app.removeLoadProgressBox();
+-		//DialogBox.notify('Error!', 'Project did not load.', app.stage);
++		DialogBox.notify('Error!', 'Project did not load.', app.stage);
+ 		app.loadProjectFailed();
+ 	}
+ 

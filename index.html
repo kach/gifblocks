@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<title>gifblocks</title>
+
+<style>
+body {
+    margin: 0;
+}
+#wrapper {
+    margin: 8px;
+}
+#scratch, object {
+    height: 100vh;
+    width:  100vw;
+}
+#view {
+    width: 480px;
+    height: 360px;
+}
+img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+#controls {
+    width: 15em;
+    margin-left: auto;
+    margin-right: auto;
+}
+</style>
+
+<script src="https://cdn.scratch.mit.edu/scratchr2/static/__038df32711f6dad9a2b40bbd5714e01c__//js/swfobject.js"></script>
+<script src="gif.js"></script>
+
+<div id="wrapper">
+<h1><strong>gifblocks</strong> - Scratch projects &rarr; animated GIFs</h1>
+
+<h2>Overview</h2>
+<p>I love animated GIFs, and I'm sure you do as well: they're a fantastic way
+to share snippets of video on the Internet.
+
+<p>This website lets you turn your Scratch projects into a GIF.  An animated
+GIF is actually just a series of still images, or <em>frames</em>, which get
+played in order really fast. <strong>gifblocks</strong> lets you take snapshots
+of the Scratch Stage and use them as frames.
+
+<p>For technical material related to this project, see <a
+href="about.html">here</a>. To make GIFs, read on!
+
+<p><img src="fred.gif"></img>
+
+<h2>Instructions</h2>
+<ol>
+    <li>Scroll down, and make a Scratch project using the editor below! You can
+    even import an <code>sb2</code> file from the <q>file</q> menu.
+
+    <li>Use the <code>snapshot</code> block, under the <q>Events</q> palette,
+    to take snapshots of the stage. Each such snapshot will become a frame in
+    your GIF. For example, to take a snapshot of whatever's on the stage ten
+    times per second, you can use the following script:<br/><img
+    src="sample-script.png"></img><small>(Note that <strong>gifblocks</strong>
+    arranges the frames in <q>real-time</q>, as opposed to playing them back at
+    a constant rate. So, if you wait ten seconds between snapshots, then the
+    GIF frames will change every ten seconds.)</small>
+
+    <li>When you are done collecting all your snapshots, scroll back up and
+    click on the <q>Submit</q> button. Your GIF should appear inside the
+    rectangle. Please note that this step might take a long time depending on
+    how many frames you have!
+
+    <li>To save your GIF to your computer, you can right-click on it and select
+    the <q>save</q> option. Alternatively, you might be able to drag it to your
+    desktop.
+
+    <li>To erase all the current frames and start over, just press the
+    <q>Clear</q> button.
+
+</ol>
+
+<div id="controls">
+<input type="button" id="render" value="Submit"></input>
+<input type="button" id="clear"  value="Clear"></input>
+(<span id="framecount">0</span> frames so far)
+</div>
+
+<img id="view"></img>
+</div>
+
+<div id="scratch"></div>
+
+<script>
+swfobject.embedSWF("gifblocks.swf", "scratch", "100%", "100%", "10.2.0", "//cdn.scratch.mit.edu/scratchr2/static/__038df32711f6dad9a2b40bbd5714e01c__/expressInstall.swf", null, null, null, null);
+
+var last = null;
+
+var gif;
+var view = document.getElementById('view');
+
+
+var render = document.getElementById('render');
+render.addEventListener('click', function() {
+    render.value = "(Please wait...)";
+    gif.render();
+    reset();
+});
+
+var clear = document.getElementById('clear');
+clear.addEventListener('click', function() {
+    reset();
+});
+
+var framecount = document.getElementById('framecount');
+
+function ping(x) {
+    function getByte(hex) {
+        return String.fromCharCode(parseInt(hex, 16));
+    }
+    function decode(hex) {
+        var result = "";
+        for (var i=0; i<hex.length; i+=2) {
+            result += getByte(hex.charAt(i)+hex.charAt(i+1));
+        }
+        return "data:image/png;base64," + btoa(result);
+    }
+    var i = new Image();
+    i.src = decode(x);
+    if (last === null) {
+        gif.addFrame(i, {delay: 0});
+        render.disabled = false;
+    } else {
+        gif.addFrame(i, {delay: Date.now()-last});
+    }
+    last = Date.now();
+    framecount.innerHTML++;
+}
+function reset() {
+    framecount.innerHTML = 0;
+    last = null;
+    render.disabled = true;
+    gif = new GIF({
+        repeat: 0,
+        workers: 2,
+        quality: 10,
+        width: 480,
+        height: 360
+    });
+    gif.on('finished', function(blob) {
+        var l = URL.createObjectURL(blob);
+        console.log(l);
+        document.getElementById('view').src = l;
+        gif = new GIF({
+            repeat: 0,
+            workers: 2,
+            quality: 10,
+            width: 480,
+            height: 360
+        });
+        render.value = "Submit";
+    });
+}
+window.onload = reset;
+</script>

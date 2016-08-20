@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<title>gifblocks - about</title>
+
+<h1>About</h1>
+
+This page has some technical information that you may or may not be too
+interested in. If you just want to make GIFs, you should return to the <a
+href="index.html">homepage</a>.
+
+<h2>Behind the scenes</h2>
+
+<p><strong>gifblocks</strong> was inspired by the <q>Save project video</q>
+feature in Scratch, which I recently discovered. I found that feature
+wonderful, and I do not think it gets enough appreciation.
+
+<p>I feel that the concept of converting a Scratch program to a GIF is
+extremely powerful for a variety of reasons. Most importantly, it resonates
+well with the demographics that Scratch aims for: young children. Animated GIFs
+can be found across the Internet, and on social media. In fact, many Scratch
+users use animated GIFs as their profile pictures or forum signatures.  The
+ability to create animated profile pictures programmatically would both
+<q>raise the ceiling</q> and <q>widen the walls</q> of Scratch.
+
+<p>Of course, I do not mean to suggest that <strong>gifblocks</strong> is the
+ideal user interface for this kind of creation. The <code>snapshot</code> block
+is just one of several potential interfaces, and far more research is required
+before we can expect this kind of feature to be included in Scratch.
+Nevertheless, I am pleased with how easy it was to implement this, and hopeful
+for the future.
+
+<p><img src="snoopy.gif"></img>
+
+<p>If you are interested in chatting further about these ideas, you can find my
+Scratch profile <a href="https://scratch.mit.edu/users/Hardmath123/">here</a>.
+
+<h2>Credits</h2>
+
+<p>Even though I only added one block, I think <strong>gifblocks</strong> is
+technically a <q>derivative work</q> of Scratch. This means, I have to do
+several things.
+
+<ol>
+    <li>Not call it Scratch&mdash;done!
+
+    <li>Release <strong>gifblocks</strong> under GPLv2 or later. I am releasing
+    <strong>gifblocks</strong> under GPLv3, whose text can be found <a
+    href="https://www.gnu.org/licenses/gpl-3.0.txt">here</a>.
+
+    <li>Release the source code. Now, I feel ridiculous publishing a massive
+    online repository for the very minimal changes I made. So, instead, I have
+    included the changes as a patch that you can find attached below. The
+    original source, of course, can be found on <a
+    href="https://github.com/LLK/scratch-flash">Github</a>.
+
+    <li>Remind you guys that <strong>gifblocks</strong> is based on Scratch
+    from the MIT Media Laboratory. This one is the easiest! :-) If you aren't
+    familiar with Scratch, I would strongly encourage you to check out the
+    website <a href="https://scratch.mit.edu">here</a> before you begin
+    tinkering with <strong>gifblocks</strong>.
+
+</ol>
+
+Finally, I used <a href="https://jnordberg.github.io/gif.js/">gif.js</a> by
+Johan Nordberg and <a
+href="https://github.com/swfobject/swfobject">swfobject</a> by the swfobject
+team.
+
+<h2>Appendix: A patchfile</h2>
+
+(Intended to be applied to commit
+<code>c041fd002be3679759e128b8746ddcf0aa251c6c</code>.)
+
+<pre>
+diff --git a/src/Scratch.as b/src/Scratch.as
+index 7b3ccb8..b9814b7 100644
+--- a/src/Scratch.as
++++ b/src/Scratch.as
+@@ -209,7 +209,8 @@ public class Scratch extends Sprite {
+ 		stage.addEventListener(Event.ENTER_FRAME, step);
+ 		stage.addEventListener(Event.RESIZE, onResize);
+ 
+-		setEditMode(startInEditMode());
++		// setEditMode(startInEditMode());
++        setEditMode(true);
+ 
+ 		// install project before calling fixLayout()
+ 		if (editMode) runtime.installNewProject();
+diff --git a/src/Specs.as b/src/Specs.as
+index 9576619..1e918db 100644
+--- a/src/Specs.as
++++ b/src/Specs.as
+@@ -394,6 +394,8 @@ public class Specs {
+ 		["hide all sprites",					" ", 99, "hideAll"],
+ 		["user id",								"r", 99, "getUserId"],
+ 
++        ["snapshot", " ", 5, "snapshot"],
++
+ 	];
+ 
+ 	public static var extensionSpecs:Array = ["when %m.booleanSensor", "when %m.sensor %m.lessMore %n", "sensor %m.booleanSensor?", "%m.sensor sensor value", "turn %m.motor on for %n secs", "turn %m.motor on", "turn %m.motor off", "set %m.motor power to %n", "set %m.motor2 direction to %m.motorDirection", "when distance %m.lessMore %n", "when tilt %m.eNe %n", "distance", "tilt"];
+diff --git a/src/primitives/Primitives.as b/src/primitives/Primitives.as
+index 142abb6..41c97cf 100644
+--- a/src/primitives/Primitives.as
++++ b/src/primitives/Primitives.as
+@@ -30,6 +30,22 @@ package primitives {
+ 	import scratch.ScratchSprite;
+ 	import translation.Translator;
+ 
++    // I didn't have the patience to figure out which imports were needed, so I
++    // imported them all. Sorry.
++    import flash.display.*;        
++    import flash.events.*;         
++    import flash.geom.Matrix;      
++    import flash.geom.Point;       
++    import flash.geom.Rectangle;   
++    import flash.media.*;          
++    import flash.net.*;            
++    import flash.system.System;    
++    import flash.text.TextField;   
++    import flash.utils.*;          
++    import util.*;
++    import by.blooddy.crypto.image.PNG24Encoder;            
++    import by.blooddy.crypto.image.PNGFilter;               
++
+ public class Primitives {
+ 
+ 	private const MaxCloneCount:int = 300;
+@@ -78,12 +94,28 @@ public class Primitives {
+ 		primTable["INCR_COUNT"]			= function(b:*):* { counter++ };
+ 		primTable["CLR_COUNT"]			= function(b:*):* { counter = 0 };
+ 
++        // Whoo
++        primTable["snapshot"] = snapshot;
++
+ 		new LooksPrims(app, interp).addPrimsTo(primTable);
+ 		new MotionAndPenPrims(app, interp).addPrimsTo(primTable);
+ 		new SoundPrims(app, interp).addPrimsTo(primTable);
+ 		new VideoMotionPrims(app, interp).addPrimsTo(primTable);
+ 		addOtherPrims(primTable);
+ 	}
++    public function fromArray(array:ByteArray):String {
++        var s:String = "";
++        for (var i:uint=0;i&lt;array.length;i++) {
++            s+=("0"+array[i].toString(16)).substr(-2,2);
++        }
++        return s;
++    }
++    function snapshot(b:Block):void {
++        app.stagePane.commitPenStrokes();
++        var d:BitmapData = app.stagePane.saveScreenData();
++        var pngData:ByteArray = PNG24Encoder.encode(d, PNGFilter.PAETH);
++        app.externalCall('ping', null, fromArray(pngData));
++    }
+ 
+ 	protected function addOtherPrims(primTable:Dictionary):void {
+ 		new SensingPrims(app, interp).addPrimsTo(primTable);
+diff --git a/src/scratch/ScratchRuntime.as b/src/scratch/ScratchRuntime.as
+index 8b4fd6f..e072bdf 100644
+--- a/src/scratch/ScratchRuntime.as
++++ b/src/scratch/ScratchRuntime.as
+@@ -92,7 +92,7 @@ public class ScratchRuntime {
+ 	//------------------------------
+ 
+ 	public function stepRuntime():void {
+-		if (projectToInstall != null && (app.isOffline || app.isExtensionDevMode)) {
++		if (projectToInstall != null /* && (app.isOffline || app.isExtensionDevMode) */) {
+ 			installProject(projectToInstall);
+ 			if (saveAfterInstall) app.setSaveNeeded(true);
+ 			projectToInstall = null;
+@@ -844,7 +844,7 @@ public class ScratchRuntime {
+ 
+ 	public function projectLoadFailed(ignore:* = null):void {
+ 		app.removeLoadProgressBox();
+-		//DialogBox.notify('Error!', 'Project did not load.', app.stage);
++		DialogBox.notify('Error!', 'Project did not load.', app.stage);
+ 		app.loadProjectFailed();
+ 	}
+</pre>
